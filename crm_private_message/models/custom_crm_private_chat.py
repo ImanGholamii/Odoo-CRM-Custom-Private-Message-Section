@@ -1,14 +1,44 @@
 # -*- coding: utf-8 -*-
 import re
 from odoo import models, fields, api
-
+from odoo.exceptions import UserError
 
 class CrmLead(models.Model):
     _inherit = 'crm.lead'
 
     custom_message_ids = fields.One2many(
-        'crm.lead.custom.private.message', 'lead_id', string='Commercial Team Messages'
+        'crm.lead.custom.private.message', 'lead_id', string='Opportunity Commercial Private Chat'
     )
+
+    @api.model
+    def create(self, vals):
+        lead = super(CrmLead, self).create(vals)
+        lead._log_expected_revenue_change(False, lead.expected_revenue)
+        return lead
+
+    def write(self, vals):
+        for lead in self:
+            old_value = lead.expected_revenue
+            res = super(CrmLead, lead).write(vals)
+            new_value = vals.get('expected_revenue', old_value)
+
+            if 'expected_revenue' in vals and old_value != new_value:
+                lead._log_expected_revenue_change(old_value, new_value)
+
+        return res
+
+    def _log_expected_revenue_change(self, old_value, new_value):
+        """ Tracking of expected_revenue """
+        if old_value != new_value:
+            user_name = self.env.user.name
+            message = f"{user_name} changed Expected Revenue from {old_value} to ➣➣➣ {new_value}"
+
+            self.env['crm.lead.custom.private.message'].create({
+                'lead_id': self.id,
+                'message': message,
+                'user_id': self.env.user.id,
+                'is_system_generated_message': True
+            })
 
 
 class CrmLeadCustomMessage(models.Model):
@@ -27,8 +57,13 @@ class CrmLeadCustomMessage(models.Model):
         help="Attachments related to this message"
     )
 
+    is_system_generated_message = fields.Boolean(default=False)
+
     @api.model
     def create(self, vals):
+        if "changed Expected Revenue from" in vals.get('message', ''):
+            vals['is_system_generated_message'] = True
+
         record = super(CrmLeadCustomMessage, self).create(vals)
 
         for attachment in record.attachment_ids:
@@ -52,3 +87,15 @@ class CrmLeadCustomMessage(models.Model):
                 }
                 mail = self.env['mail.mail'].create(mail_values)
                 mail.send()
+
+    def unlink(self):
+        for record in self:
+            if record.is_system_generated_message or "changed Expected Revenue from" in record.message:
+                raise UserError(f"❌\nYou cannot delete this system-generated message. 💻⚙️")
+        return super(CrmLeadCustomMessage, self).unlink()
+
+    def write(self, vals):
+        for record in self:
+            if record.is_system_generated_message or "changed Expected Revenue from" in record.message:
+                raise UserError(f"❌\nYou cannot edit this System-generated message. 💻⚙️")
+        return super(CrmLeadCustomMessage, self).write(vals)
