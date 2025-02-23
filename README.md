@@ -16,7 +16,7 @@ This Odoo module extends the `crm.lead` model to enable private commercial team 
 3. Install the module from the Odoo Apps menu.
 
 ## Usage
-1. Open a lead (`CRM -> Sales -> Leads`).
+1. Open a lead (`CRM -> Sales -> Pipeline`).
 2. Navigate to the **Commercial Team Messages** tab.
 3. Add a message, mention users, and attach files.
 4. Mentioned users will receive an email notification.
@@ -28,7 +28,7 @@ This Odoo module extends the `crm.lead` model to enable private commercial team 
 ## Technical Details
 ### Models
 - `crm.lead.custom.private.message`
-  - Stores private messages linked to CRM leads.
+  - Stores private messages linked to CRM leads (crm.lead).
   - Supports tracking messages and mentions.
   - Sends email notifications to mentioned users.
 
