@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import re
+
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+
 
 class CrmLead(models.Model):
     _inherit = 'crm.lead'
@@ -52,7 +53,8 @@ class CrmLeadCustomMessage(models.Model):
     mentioned_user_ids = fields.Many2many('res.users', string='Mentioned Users')
 
     attachment_ids = fields.Many2many(
-        'ir.attachment', 'crm_custom_message_attachment_rel', 'message_id', 'attachment_id',
+        'ir.attachment',
+        'crm_custom_message_attachment_rel', 'message_id', 'attachment_id',
         string="Attachments",
         help="Attachments related to this message"
     )
@@ -81,9 +83,68 @@ class CrmLeadCustomMessage(models.Model):
             for user in record.mentioned_user_ids:
                 mail_values = {
                     'email_to': user.email,
-                    'subject': f"You were mentioned in a message",
-                    'body_html': f"<p>{record.user_id.name} mentioned you in a message:</p><p>{record.message}</p>"
-                                 f"<p><a href={lead_url}>Click here to view the message</a></p>",
+                    'subject': f"You were mentioned in an Odoo message",
+
+                    'body_html': f"""
+                                    <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 15px; 
+                                                border-radius: 8px; border: 1px solid #ddd;">
+                                        <h2 style="color: #0275d8; text-align: center;">📢 New Mention Notification</h2>
+                
+                                        <p style="font-size: 14px; color: #333;"><strong>{record.user_id.name}</strong> mentioned you in a message:</p>
+                
+                                        <div style="background-color: #fff; padding: 10px; border-left: 4px solid #0275d8; 
+                                                    font-style: italic; color: #555;">
+                                            "{record.message}"
+                                        </div>
+                
+                                        <p style="text-align: center;">
+                                            <a href="{lead_url}" style="display: inline-block; padding: 10px 20px; background-color: #0275d8; 
+                                            color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">📩 View Message</a>
+                                        </p>
+                
+                                        <hr style="background-color: red; height: 3px; border: none;">
+                
+                                        <p style="color: #999; font-size: 12px; text-align: center;">
+                                            © Odoo System | Auto-generated Notification
+                                        </p>
+                                    </div>
+                                """
+
+                }
+                mail = self.env['mail.mail'].create(mail_values)
+                mail.send()
+
+            # Add the Commercial Manager Login info, for receiving the email notifications of expected revenue changes.
+            if record.is_system_generated_message:
+                # commercial_manager = self.env['res.users'].search([('login', '=', 'sharlotimi@gmail.com')], limit=1)
+                mail_values = {
+                    'email_to': commercial_manager.email,
+
+                    'subject': f"Auto generated Odoo message",
+
+                    'body_html': f"""
+                                    <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+                                        <h2 style="color: #d9534f; text-align: center;">⚠ Important Notification ⚠</h2>
+                                        <p style="font-size: 14px; color: #333;">This message is from <strong>Odoo System</strong></p>
+                                        <p style="font-size: 16px; font-weight: bold; color: #0275d8;">CRM module: Expected Revenue has been Changed.</p>
+                
+                                        <p style="text-align: center;">
+                                            <a href="{lead_url}" style="display: inline-block; padding: 10px 20px; background-color: #0275d8; color: white; 
+                                            text-decoration: none; border-radius: 5px; font-weight: bold;">📂 View Changes</a>
+                                        </p>
+                
+                                        <hr style="background-color: red; height: 3px; border: none;">
+                
+                                        <p style="color: #555; font-size: 12px; text-align: center;">
+                                            This message is <strong>strictly confidential</strong> and intended for you only. If you made these changes, you can ignore this message.
+                                        </p>
+                
+                                        <p style="color: #999; font-size: 12px; text-align: center;">
+                                            © Odoo System | Auto-generated Notification
+                                        </p>
+                                    </div>
+                                """
+
                 }
                 mail = self.env['mail.mail'].create(mail_values)
                 mail.send()
