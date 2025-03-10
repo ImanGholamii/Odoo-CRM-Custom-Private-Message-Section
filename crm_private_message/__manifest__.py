@@ -7,7 +7,8 @@
     """,
 
     'description': """
-        Adds a private section in CRM module for Specific Users to have secret chats.
+        This Odoo module extends the crm.lead model to enable private commercial team messages within leads.
+         Users can mention others, attach files, and send email notifications when mentioned in a message.
     """,
 
     'author': "Iman gholami",
